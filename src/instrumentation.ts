@@ -27,12 +27,25 @@ export class PrismaInstrumentation extends InstrumentationBase {
     this._wrap(Client, "_request", this._trace());
   }
 
+  private flattenObject(obj, prefix = "") {
+    return Object.keys(obj).reduce((acc, k) => {
+      const pre = prefix.length ? prefix + "." : "";
+      if (typeof obj[k] === "object")
+        Object.assign(acc, this.flattenObject(obj[k], pre + k));
+      else acc[pre + k] = obj[k];
+      return acc;
+    }, {});
+  }
+
   private _trace() {
     const plugin = this;
     return function (original: () => any) {
       return function patchedRequest(this: any) {
         const args = arguments[0] as {
           clientMethod: string;
+          action: string;
+          model: string;
+          args?: any;
         };
 
         const span = plugin.tracer.startSpan(
@@ -40,7 +53,9 @@ export class PrismaInstrumentation extends InstrumentationBase {
           {
             kind: SpanKind.CLIENT,
             attributes: {
-              component: "prisma",
+              "prisma.action": args.action,
+              "prisma.model": args.model,
+              ...plugin.flattenObject(args.args, "prisma.args"),
             },
           },
           context.active()
