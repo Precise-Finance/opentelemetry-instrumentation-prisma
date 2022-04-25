@@ -7,7 +7,6 @@ import {
 import { context, trace, SpanKind } from "@opentelemetry/api";
 
 import { SemanticAttributes } from "@opentelemetry/semantic-conventions";
-import * as prismaTypes from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { PrismaInstrumentationConfig } from "./types";
 import { VERSION } from "./version";
@@ -24,36 +23,8 @@ export class PrismaInstrumentation extends InstrumentationBase {
   }
 
   protected init() {
-    const prismaClientModule = new InstrumentationNodeModuleDefinition<
-      typeof prismaTypes
-    >(
-      "@prisma/client",
-      ["*"],
-      (moduleExports: typeof prismaTypes) => {
-        // This code somehow doesn't get called
-        const PrismaClient = moduleExports.PrismaClient.prototype as any;
-
-        // _request
-        if (isWrapped(PrismaClient["_request"])) {
-          this._unwrap(PrismaClient, "_request");
-        }
-        this._wrap(PrismaClient, "_request", this._trace());
-
-        return moduleExports;
-      },
-      (moduleExports: typeof prismaTypes) => {
-        const PrismaClient = moduleExports.PrismaClient.prototype as any;
-        this._unwrap(PrismaClient, "_request");
-      }
-    );
-
-    // _request
-    if (isWrapped(PrismaClient["_request"])) {
-      this._unwrap(PrismaClient, "_request");
-    }
-    this._wrap(PrismaClient, "_request", this._trace());
-
-    return [prismaClientModule];
+    const Client = PrismaClient.prototype as any;
+    this._wrap(Client, "_request", this._trace());
   }
 
   private _trace() {
