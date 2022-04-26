@@ -27,7 +27,10 @@ export class PrismaInstrumentation extends InstrumentationBase {
     this._wrap(Client, "_request", this._trace());
   }
 
-  private flattenObject(obj, prefix = "") {
+  private flattenObject(obj: any, prefix = "") {
+    if (obj === null || obj === undefined) {
+      return undefined;
+    }
     return Object.keys(obj).reduce((acc, k) => {
       const pre = prefix.length ? prefix + "." : "";
       if (typeof obj[k] === "object")
